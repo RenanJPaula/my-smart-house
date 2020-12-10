@@ -8,6 +8,7 @@ IPAddress apSubnet(255, 255, 0, 0);
 
 const String AP_NETWORK_NAME = "Config";
 const int CONFIG_PIN = 16;
+const int RELAY_PIN = 5;
 
 ESP8266WebServer server(80);
 
@@ -15,8 +16,13 @@ void setupConfigPin() {
   pinMode(CONFIG_PIN, INPUT);
 }
 
+void setupRelayPin() {
+  pinMode(RELAY_PIN, OUTPUT);
+  digitalWrite(RELAY_PIN, LOW);
+}
+
 boolean isConfigSetup() {
-  return digitalRead(CONFIG_PIN) == 0;
+  return digitalRead(CONFIG_PIN) == 1;
 }
 
 void setupConfigAccessPoint() {
@@ -62,6 +68,7 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
   setupConfigPin();
+  setupRelayPin();
 
   if (isConfigSetup()) {
     Serial.println("Config setup mode on");
