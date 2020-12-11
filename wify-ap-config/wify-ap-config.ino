@@ -2,16 +2,17 @@
 #include <ESP8266WebServer.h>
 #include <FS.h>
 
+const String AP_NETWORK_NAME = "Config";
 IPAddress apIP(192, 168, 1, 1);
 IPAddress apGateway(192, 168, 1, 1);
 IPAddress apSubnet(255, 255, 0, 0);
 
-const String AP_NETWORK_NAME = "Config";
-
 const int CONFIG_PIN = 16;
 const int RELAY_PIN = 5;
-
 const String NETWORK_CREDENTIALS_FILE = "network-credentials.txt";
+const String APPLICATION_FILE = "network-credentials.txt";
+
+int relayStatus = 0;
 
 struct NetworkCredentials {
   String networkName;
@@ -33,6 +34,16 @@ void setupRelayPin() {
 void setupHardware() {
   setupConfigPin();
   setupRelayPin();
+}
+
+void setRelayOn() {
+  digitalWrite(RELAY_PIN, HIGH);
+  relayStatus = 1;
+}
+
+void setRelayOff() {
+  digitalWrite(RELAY_PIN, LOW);
+  relayStatus = 0;
 }
 
 /* BUSINESS FUNCTIONS */
@@ -138,6 +149,30 @@ void handleSaveConfig() {
   server.send(200);
 }
 
+void handleApplicationPage() {
+  File file = SPIFFS.open("/application.html", "r");
+  server.streamFile(file, "text/html");
+  file.close();
+}
+
+void handleStatusRelay() {
+  String response = "{ \"relayStatus\" : " + String(relayStatus) + " }";
+  Serial.println("response:" + response);
+  server.send(200, "text/json", response);
+}
+
+void handleChangeStatusRelay() {
+  String relayStatus = server.arg("relayStatus");
+  if (relayStatus == "0") {
+    setRelayOff();
+  } else {
+    setRelayOn();
+  }
+  String response = "{ \"relayStatus\" : " + String(relayStatus) + " }";
+  Serial.println("response:" + response);
+  server.send(200, "text/json", response);
+}
+
 void setupConfigHttpServer() {
   server.on("/", HTTP_GET, handleConfigPage);
   server.on("/config", HTTP_POST, handleSaveConfig);
@@ -145,6 +180,15 @@ void setupConfigHttpServer() {
   Serial.println("Config server listening on port 80");
 }
 
+void setupApplicationHttpServer() {
+  server.on("/", HTTP_GET, handleApplicationPage);
+  server.on("/relay", HTTP_GET, handleStatusRelay);
+  server.on("/relay", HTTP_POST, handleChangeStatusRelay);
+  server.begin();
+  Serial.println("Config server listening on port 80");
+}
+
+/* MAIN */
 void setup() {
   Serial.begin(115200);
   Serial.println();
@@ -158,6 +202,7 @@ void setup() {
   } else {
     Serial.println("Operation mode on");
     setupNetwork();
+    setupApplicationHttpServer();
   }
 }
 

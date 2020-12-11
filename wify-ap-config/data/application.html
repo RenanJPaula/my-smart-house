@@ -75,6 +75,7 @@
             justify-content: center;
             align-items: center;
             position: relative;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .power-switch .button::after {
@@ -139,6 +140,7 @@
             z-index: 2;
             cursor: pointer;
             opacity: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .power-switch input:checked+.button::after {
@@ -230,7 +232,7 @@
 
     <div class="content">
         <div class="power-switch">
-            <input type="checkbox" />
+            <input id="checkbox-relay" type="checkbox" />
             <div class="button">
                 <svg class="power-off">
                     <use xlink:href="#line" class="line" />
@@ -245,6 +247,47 @@
     </div>
 
     <script>
+        const checkboxRelay = document.getElementById('checkbox-relay');
+        checkboxRelay.addEventListener('change', async () => {
+            try {
+                const form = new FormData();
+                form.append('relayStatus', !checkboxRelay.checked ? '0' : '1');
+                const response = await fetch("/relay", { method: "POST", body: form });
+                if (response.status === 200) {
+                    const responseBody = await response.json();
+                    checkboxRelay.checked = responseBody.relayStatus;
+                } else {
+                    console.error(response.status, response);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        });
+        
+        (function main(){
+            scheduleUpdates();
+            updateRelayStatus();
+        })();
+
+        function scheduleUpdates() {
+            setInterval(updateRelayStatus, 2000);
+        }
+        
+        async function updateRelayStatus() {
+            try {
+                const response = await fetch("/relay");
+
+                if (response.status === 200) {
+                    const responseBody = await response.json();
+                    checkboxRelay.checked = responseBody.relayStatus;
+                } else {
+                    console.error(response.status, response);
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
     </script>
 </body>
 
