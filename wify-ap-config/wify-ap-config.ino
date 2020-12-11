@@ -12,6 +12,11 @@ const int RELAY_PIN = 5;
 
 const String NETWORK_CREDENTIALS_FILE = "network-credentials.txt";
 
+struct networkCredentials {
+  String networkName;
+  String password;
+};
+
 ESP8266WebServer server(80);
 
 void setupConfigPin() {
@@ -51,29 +56,34 @@ void handleRoot() {
   file.close();
 }
 
-void saveCredentials(String networkName, String password){
+void saveCredentials(String networkName, String password) {
   File file = SPIFFS.open(NETWORK_CREDENTIALS_FILE, "w");
   file.println(networkName);
   file.println(password);
-  file.close();  
+  file.close();
 }
 
-String * readCredentials(){
+struct networkCredentials readCredentials() {
   Serial.println("Reading network credentials");
   File file = SPIFFS.open(NETWORK_CREDENTIALS_FILE, "r");
-    
+
   if (!file) {
-      Serial.print(NETWORK_CREDENTIALS_FILE);
-      Serial.println(" not found!");
+    Serial.print(NETWORK_CREDENTIALS_FILE);
+    Serial.println(" not found!");
   }
 
-  String credentials[2];
   int line = 0;
+  struct networkCredentials credentials;
 
   while (file.available()) {
-    credentials[line] = file.readStringUntil('\n');
-    Serial.println(credentials[line]);
-    Serial.println(line);
+    if (line == 0) {
+      credentials.networkName = file.readStringUntil('\n');
+    }
+
+    if (line == 1) {
+      credentials.password  = file.readStringUntil('\n');
+    }
+
     line++;
   }
 
@@ -85,13 +95,13 @@ String * readCredentials(){
 void handleSaveConfig() {
   String networkName = server.arg("networkName");
   String password = server.arg("password");
-  
+
   Serial.println("Setting a new network credentials");
   Serial.print("networkName: ");
   Serial.println(networkName);
   Serial.print("password: ");
   Serial.println(password);
-  
+
   saveCredentials(networkName, password);
   server.send(200);
 }
@@ -114,10 +124,10 @@ void setup() {
   setupHardware();
   setupFileSystem();
 
-  String *credentials = readCredentials();
-  
-  Serial.println(credentials[0]);
-  Serial.println(credentials[1]);
+  struct networkCredentials credentials = readCredentials();
+
+  Serial.println(credentials.networkName);
+  Serial.println(credentials.password);
 
   if (isConfigSetup()) {
     Serial.println("Config setup mode on");
@@ -125,7 +135,7 @@ void setup() {
     setupConfigHttpServer();
   } else {
     Serial.println("Operation mode on");
-    
+
   }
 }
 
