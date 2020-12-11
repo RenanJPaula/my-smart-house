@@ -10,6 +10,8 @@ const String AP_NETWORK_NAME = "Config";
 const int CONFIG_PIN = 16;
 const int RELAY_PIN = 5;
 
+const String NETWORK_CREDENTIALS_FILE = "network-credentials.txt";
+
 ESP8266WebServer server(80);
 
 void setupConfigPin() {
@@ -49,32 +51,81 @@ void handleRoot() {
   file.close();
 }
 
-void handleConfig() {
+void saveCredentials(String networkName, String password){
+  File file = SPIFFS.open(NETWORK_CREDENTIALS_FILE, "w");
+  file.println(networkName);
+  file.println(password);
+  file.close();  
+}
+
+String * readCredentials(){
+  Serial.println("Reading network credentials");
+  File file = SPIFFS.open(NETWORK_CREDENTIALS_FILE, "r");
+    
+  if (!file) {
+      Serial.print(NETWORK_CREDENTIALS_FILE);
+      Serial.println(" not found!");
+  }
+
+  String credentials[2];
+  int line = 0;
+
+  while (file.available()) {
+    credentials[line] = file.readStringUntil('\n');
+    Serial.println(credentials[line]);
+    Serial.println(line);
+    line++;
+  }
+
+  file.close();
+
+  return credentials;
+}
+
+void handleSaveConfig() {
+  String networkName = server.arg("networkName");
+  String password = server.arg("password");
+  
+  Serial.println("Setting a new network credentials");
   Serial.print("networkName: ");
-  Serial.println(server.arg("networkName"));
+  Serial.println(networkName);
   Serial.print("password: ");
-  Serial.println(server.arg("password"));
+  Serial.println(password);
+  
+  saveCredentials(networkName, password);
   server.send(200);
 }
 
 void setupConfigHttpServer() {
   server.on("/", HTTP_GET, handleRoot);
-  server.on("/config", HTTP_POST, handleConfig);
+  server.on("/config", HTTP_POST, handleSaveConfig);
   server.begin();
   Serial.println("Config server listening on port 80");
+}
+
+void setupHardware() {
+  setupConfigPin();
+  setupRelayPin();
 }
 
 void setup() {
   Serial.begin(115200);
   Serial.println();
-  setupConfigPin();
-  setupRelayPin();
+  setupHardware();
+  setupFileSystem();
+
+  String *credentials = readCredentials();
+  
+  Serial.println(credentials[0]);
+  Serial.println(credentials[1]);
 
   if (isConfigSetup()) {
     Serial.println("Config setup mode on");
-    setupFileSystem();
     setupConfigAccessPoint();
     setupConfigHttpServer();
+  } else {
+    Serial.println("Operation mode on");
+    
   }
 }
 
