@@ -7,10 +7,20 @@ IPAddress apIP(192, 168, 1, 1);
 IPAddress apGateway(192, 168, 1, 1);
 IPAddress apSubnet(255, 255, 0, 0);
 
-const int CONFIG_PIN = 16;
-const int RELAY_PIN = 5;
+const int RELAY_PIN = 5; // D1
+const int CONFIG_PIN = 4; // D2
+const int WIFI_CONNECTED_PIN = 2; // D4
+
 const String NETWORK_CREDENTIALS_FILE = "network-credentials.txt";
 const String APPLICATION_FILE = "network-credentials.txt";
+const String NETWORK_CONFIG_PAGE = "/config-network.html";
+const String APPLICATION_PAGE = "/application.html";
+const String WEBMANIFEST_FILE = "/manifest.webmanifest";
+const String LAUNCHERICON_48_FILE = "/launchericon-48-48.png";
+const String LAUNCHERICON_72_FILE = "/launchericon-72-72.png";
+const String LAUNCHERICON_96_FILE = "/launchericon-96-96.png";
+const String LAUNCHERICON_144_FILE = "/launchericon-144-144.png";
+const String LAUNCHERICON_192_FILE = "/launchericon-192-192.png";
 
 int relayStatus = 0;
 
@@ -31,9 +41,15 @@ void setupRelayPin() {
   digitalWrite(RELAY_PIN, LOW);
 }
 
+void setupIndicatorsPins() {
+  pinMode(WIFI_CONNECTED_PIN, OUTPUT);
+  digitalWrite(WIFI_CONNECTED_PIN, LOW);
+}
+
 void setupHardware() {
   setupConfigPin();
   setupRelayPin();
+  setupIndicatorsPins();
 }
 
 void setRelayOn() {
@@ -77,6 +93,7 @@ void setupNetwork() {
     Serial.println("Waiting to connect...");
   }
 
+  digitalWrite(WIFI_CONNECTED_PIN, HIGH);
   Serial.print("MAC Address: ");
   Serial.println(WiFi.macAddress());
   Serial.print("IP address: ");
@@ -137,7 +154,7 @@ struct NetworkCredentials readCredentials() {
 
 /* HTTP SERVER */
 void handleConfigPage() {
-  File file = SPIFFS.open("/config-network.html", "r");
+  File file = SPIFFS.open(NETWORK_CONFIG_PAGE, "r");
   server.streamFile(file, "text/html");
   file.close();
 }
@@ -150,8 +167,44 @@ void handleSaveConfig() {
 }
 
 void handleApplicationPage() {
-  File file = SPIFFS.open("/application.html", "r");
+  File file = SPIFFS.open(APPLICATION_PAGE, "r");
   server.streamFile(file, "text/html");
+  file.close();
+}
+
+void handleWebmanifest() {
+  File file = SPIFFS.open(WEBMANIFEST_FILE, "r");
+  server.streamFile(file, "application/manifest+json");
+  file.close();
+}
+
+void handleLaunchericon48() {
+  File file = SPIFFS.open(LAUNCHERICON_48_FILE, "r");
+  server.streamFile(file, "image/png");
+  file.close();
+}
+
+void handleLaunchericon72() {
+  File file = SPIFFS.open(LAUNCHERICON_72_FILE, "r");
+  server.streamFile(file, "image/png");
+  file.close();
+}
+
+void handleLaunchericon96() {
+  File file = SPIFFS.open(LAUNCHERICON_96_FILE, "r");
+  server.streamFile(file, "image/png");
+  file.close();
+}
+
+void handleLaunchericon144() {
+  File file = SPIFFS.open(LAUNCHERICON_144_FILE, "r");
+  server.streamFile(file, "image/png");
+  file.close();
+}
+
+void handleLaunchericon192() {
+  File file = SPIFFS.open(LAUNCHERICON_192_FILE, "r");
+  server.streamFile(file, "image/png");
   file.close();
 }
 
@@ -181,9 +234,19 @@ void setupConfigHttpServer() {
 }
 
 void setupApplicationHttpServer() {
+  // PWA APPLICATION
   server.on("/", HTTP_GET, handleApplicationPage);
+  server.on("/manifest.webmanifest", HTTP_GET, handleWebmanifest);
+  server.on("/launchericon-48-48.png", HTTP_GET, handleLaunchericon48);
+  server.on("/launchericon-72-72.png", HTTP_GET, handleLaunchericon72);
+  server.on("/launchericon-96-96.png", HTTP_GET, handleLaunchericon96);
+  server.on("/launchericon-144-144.png", HTTP_GET, handleLaunchericon144);
+  server.on("/launchericon-192-192.png", HTTP_GET, handleLaunchericon192);
+    
+  // API
   server.on("/relay", HTTP_GET, handleStatusRelay);
   server.on("/relay", HTTP_POST, handleChangeStatusRelay);
+  
   server.begin();
   Serial.println("Config server listening on port 80");
 }
