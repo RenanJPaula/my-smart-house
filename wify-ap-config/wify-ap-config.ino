@@ -85,6 +85,8 @@ void setupNetwork() {
   Serial.println(credentials.networkName);
   Serial.print("With password: ");
   Serial.println(credentials.password);
+
+  digitalWrite(WIFI_CONNECTED_PIN, LOW);
   
   WiFi.begin(credentials.networkName, credentials.password);
 
@@ -98,6 +100,14 @@ void setupNetwork() {
   Serial.println(WiFi.macAddress());
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
+}
+
+void autoReconnectNetwork () {
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Reconnecting WIFI Network");
+    setupNetwork();
+    delay(1000);
+  }
 }
 
 /* FILE SYSTEM STORAGE */
@@ -271,4 +281,7 @@ void setup() {
 
 void loop() {
   server.handleClient();
+  if (!isConfigSetup()) {
+    autoReconnectNetwork();  
+  }
 }
